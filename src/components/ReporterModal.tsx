@@ -12,43 +12,38 @@ import {
 } from 'react-native';
 import {colors, typography, spacing, radius} from '../theme';
 import {Button} from './Button';
-import type {MatchEventType} from '../shared/types';
+import type {ReporterActionType} from './ReporterActions';
 
 interface ReporterModalProps {
   visible: boolean;
-  eventType: MatchEventType;
-  onSubmit: (player: string, description: string) => void;
+  actionType: ReporterActionType;
+  onSubmit: (description: string) => void;
   onCancel: () => void;
 }
 
-const eventLabels: Record<MatchEventType, string> = {
-  avspark: 'Avspark',
-  mål: 'Mål',
+const actionLabels: Record<ReporterActionType, string> = {
+  mål_oss: 'Mål for oss',
+  mål_dem: 'Mål for motstander',
   pause: 'Pause',
-  andre_omgang: 'Andre omgang',
-  slutt: 'Slutt',
-  bytte: 'Bytte',
-  kort: 'Kort',
-  melding: 'Melding',
+  slutt: 'Kampslutt',
+  melding: 'Kommentar',
 };
 
 export function ReporterModal({
   visible,
-  eventType,
+  actionType,
   onSubmit,
   onCancel,
 }: ReporterModalProps) {
-  const [player, setPlayer] = useState('');
   const [description, setDescription] = useState('');
 
   const handleSubmit = () => {
-    onSubmit(player.trim(), description.trim());
-    setPlayer('');
+    onSubmit(description.trim());
     setDescription('');
   };
 
-  const needsPlayer = ['mål', 'bytte', 'kort'].includes(eventType);
-  const title = eventLabels[eventType];
+  const title = actionLabels[actionType];
+  const isComment = actionType === 'melding';
 
   return (
     <Modal
@@ -63,35 +58,24 @@ export function ReporterModal({
           <View style={styles.modal}>
             <Text style={styles.title}>{title}</Text>
 
-            {needsPlayer && (
-              <View style={styles.field}>
-                <Text style={styles.label}>Spiller</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="F.eks. Erlend H."
-                  placeholderTextColor={colors.textTertiary}
-                  value={player}
-                  onChangeText={setPlayer}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
-              </View>
-            )}
-
             <View style={styles.field}>
               <Text style={styles.label}>
-                {eventType === 'melding' ? 'Melding' : 'Kort beskrivelse'}
+                {isComment ? 'Melding' : 'Kort beskrivelse (valgfritt)'}
               </Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                placeholder="Skriv her..."
+                placeholder={
+                  isComment
+                    ? 'Skriv melding...'
+                    : 'F.eks. "Erlend med heading"'
+                }
                 placeholderTextColor={colors.textTertiary}
                 value={description}
                 onChangeText={setDescription}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
-                returnKeyType="done"
+                autoFocus
               />
             </View>
 
@@ -100,7 +84,6 @@ export function ReporterModal({
                 title="Avbryt"
                 variant="ghost"
                 onPress={() => {
-                  setPlayer('');
                   setDescription('');
                   onCancel();
                 }}
@@ -110,7 +93,7 @@ export function ReporterModal({
                 title="Rapporter"
                 variant="primary"
                 onPress={handleSubmit}
-                disabled={needsPlayer && !player.trim()}
+                disabled={isComment && !description.trim()}
                 style={styles.button}
               />
             </View>

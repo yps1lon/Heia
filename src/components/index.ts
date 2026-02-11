@@ -13,4 +13,6 @@ export {MatchEventRow} from './MatchEventRow';
 export {LiveMatchBanner} from './LiveMatchBanner';
 export {ReporterActions} from './ReporterActions';
 export {ReporterModal} from './ReporterModal';
+export {ReporterBar} from './ReporterBar';
+export {ReporterSheet} from './ReporterSheet';
 export {SimulatedPush} from './SimulatedPush';
