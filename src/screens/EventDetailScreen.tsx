@@ -15,14 +15,17 @@ import {
   MatchEventRow,
   ReporterActions,
   ReporterModal,
+  ReporterBar,
+  ReporterSheet,
   SimulatedPush,
 } from '../components';
+import type {ReporterActionType} from '../components/ReporterActions';
 import {
   events,
   eventAttendees,
   users,
   currentUser,
-  canReport,
+  isAdmin,
   liveMatchEvents,
   team,
 } from '../shared/mockData';
@@ -30,7 +33,6 @@ import type {
   HomeStackParamList,
   RSVPStatus,
   User,
-  MatchEventType,
 } from '../shared/types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'EventDetail'>;
@@ -77,8 +79,12 @@ export function EventDetailScreen({route}: Props) {
   const [myStatus, setMyStatus] = useState<RSVPStatus>(event.rsvp.myStatus);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reporterModalVisible, setReporterModalVisible] = useState(false);
-  const [selectedEventType, setSelectedEventType] =
-    useState<MatchEventType>('mål');
+  const [reporterSheetVisible, setReporterSheetVisible] = useState(false);
+  const [selectedActionType, setSelectedActionType] =
+    useState<ReporterActionType>('mål_oss');
+  const [reporterId, setReporterId] = useState<string | undefined>(
+    event.reporterId,
+  );
   const [pushNotification, setPushNotification] = useState({
     visible: false,
     title: '',
@@ -88,7 +94,11 @@ export function EventDetailScreen({route}: Props) {
   const isLiveMatch =
     event.type === 'kamp' &&
     (event.matchStatus === 'live' || event.matchStatus === 'halfTime');
-  const isReporter = canReport(currentUser.id);
+  const isCurrentUserReporter = reporterId === currentUser.id;
+  const isCurrentUserAdmin = isAdmin(currentUser.id);
+  const reporter = reporterId
+    ? users.find(u => u.id === reporterId)
+    : undefined;
 
   // Oppmøteliste
   const attendees = eventAttendees[eventId as keyof typeof eventAttendees] ?? {
@@ -119,30 +129,63 @@ export function EventDetailScreen({route}: Props) {
         : event.rsvp.notComing,
   };
 
-  const handleReporterAction = (type: MatchEventType) => {
-    setSelectedEventType(type);
+  const handleReporterAction = (type: ReporterActionType) => {
+    // Pause and slutt: confirm directly, no modal needed
+    if (type === 'pause' || type === 'slutt') {
+      const label = type === 'pause' ? 'Pause' : 'Kampen er ferdig';
+      setPushNotification({
+        visible: true,
+        title: `${team.name} · ${label}`,
+        message:
+          type === 'pause'
+            ? `Pause. ${event.score?.home}-${event.score?.away}.`
+            : `Slutt! ${event.score?.home}-${event.score?.away}.`,
+      });
+      return;
+    }
+
+    setSelectedActionType(type);
     setReporterModalVisible(true);
   };
 
-  const handleReportSubmit = (player: string, description: string) => {
+  const handleReportSubmit = (description: string) => {
     setReporterModalVisible(false);
 
-    const eventLabels: Record<MatchEventType, string> = {
-      avspark: 'Avspark',
-      mål: 'MÅL!',
+    const actionLabels: Record<ReporterActionType, string> = {
+      mål_oss: 'MÅL!',
+      mål_dem: 'Mål (motstander)',
       pause: 'Pause',
-      andre_omgang: 'Andre omgang',
       slutt: 'Kampen er ferdig',
-      bytte: 'Bytte',
-      kort: 'Kort',
       melding: 'Melding fra kampen',
     };
 
     setPushNotification({
       visible: true,
-      title: `${team.name} · ${eventLabels[selectedEventType]}`,
-      message: description || `${player} — ${event.title}`,
+      title: `${team.name} · ${actionLabels[selectedActionType]}`,
+      message: description || event.title,
     });
+  };
+
+  const handleClaimReporter = () => {
+    setReporterId(currentUser.id);
+    setPushNotification({
+      visible: true,
+      title: 'Kampreporter',
+      message: 'Du er nå kampreporter for denne kampen.',
+    });
+  };
+
+  const handleSelectReporter = (userId: string) => {
+    setReporterId(userId);
+    setReporterSheetVisible(false);
+    const selected = users.find(u => u.id === userId);
+    if (selected) {
+      setPushNotification({
+        visible: true,
+        title: 'Kampreporter byttet',
+        message: `${selected.name} er nå kampreporter.`,
+      });
+    }
   };
 
   // -----------------------------------------------------------------------
@@ -169,8 +212,20 @@ export function EventDetailScreen({route}: Props) {
             />
           </View>
 
-          {/* Kampvarsler for tilskuere */}
-          {!isReporter && (
+          {/* Reporter-bar */}
+          <View style={styles.section}>
+            <ReporterBar
+              reporter={reporter}
+              isAdmin={isCurrentUserAdmin}
+              isMe={isCurrentUserReporter}
+              isMember={users.some(u => u.id === currentUser.id)}
+              onChangeReporter={() => setReporterSheetVisible(true)}
+              onClaimReporter={handleClaimReporter}
+            />
+          </View>
+
+          {/* Kampvarsler for tilskuere (ikke reporter) */}
+          {!isCurrentUserReporter && (
             <View style={styles.section}>
               <Card>
                 <View style={styles.notificationRow}>
@@ -201,8 +256,8 @@ export function EventDetailScreen({route}: Props) {
             </View>
           )}
 
-          {/* Reporter-verktøy for trener */}
-          {isReporter && (
+          {/* Reporter-verktøy — kun synlig for aktiv reporter */}
+          {isCurrentUserReporter && (
             <View style={styles.section}>
               <ReporterActions onAction={handleReporterAction} />
             </View>
@@ -237,9 +292,18 @@ export function EventDetailScreen({route}: Props) {
         {/* Reporter-modal */}
         <ReporterModal
           visible={reporterModalVisible}
-          eventType={selectedEventType}
+          actionType={selectedActionType}
           onSubmit={handleReportSubmit}
           onCancel={() => setReporterModalVisible(false)}
+        />
+
+        {/* Reporter-velger */}
+        <ReporterSheet
+          visible={reporterSheetVisible}
+          members={users}
+          currentReporterId={reporterId}
+          onSelect={handleSelectReporter}
+          onClose={() => setReporterSheetVisible(false)}
         />
       </View>
     );

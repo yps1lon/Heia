@@ -33,6 +33,7 @@ export interface MatchEvent {
   minute: number;
   player?: string;
   description: string;
+  reportedBy: string;
   createdAt: Date;
 }
 
@@ -63,6 +64,7 @@ export interface HeiaEvent {
   opponent?: string;
   matchStatus?: MatchStatus;
   matchEvents?: MatchEvent[];
+  reporterId?: string;
 }
 
 export interface RSVPSummary {

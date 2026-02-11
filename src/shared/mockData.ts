@@ -33,8 +33,9 @@ export const users: User[] = [
   {id: 'u15', name: 'Silje Aas', role: 'forelder'},
 ];
 
-export function canReport(userId: string): boolean {
-  return userId === coach.id;
+export function isAdmin(userId: string): boolean {
+  const user = users.find(u => u.id === userId);
+  return user?.role === 'trener';
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,7 @@ export const liveMatchEvents: MatchEvent[] = [
     type: 'avspark',
     minute: 0,
     description: 'Kampen er i gang!',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 11, 0),
   },
   {
@@ -78,6 +80,7 @@ export const liveMatchEvents: MatchEvent[] = [
     minute: 8,
     player: 'Erlend H.',
     description: 'Erlend H. scorer på en flott heading! 1-0 til Fjellørn!',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 11, 8),
   },
   {
@@ -87,6 +90,7 @@ export const liveMatchEvents: MatchEvent[] = [
     minute: 23,
     player: 'Oliver K.',
     description: 'Lyn utligner med et langskudd. 1-1.',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 11, 23),
   },
   {
@@ -95,6 +99,7 @@ export const liveMatchEvents: MatchEvent[] = [
     type: 'pause',
     minute: 30,
     description: 'Pause. Stillingen er 1-1.',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 11, 30),
   },
   {
@@ -103,6 +108,7 @@ export const liveMatchEvents: MatchEvent[] = [
     type: 'andre_omgang',
     minute: 30,
     description: 'Andre omgang er i gang!',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 11, 45),
   },
   {
@@ -112,6 +118,7 @@ export const liveMatchEvents: MatchEvent[] = [
     minute: 52,
     player: 'Sofie B. jr.',
     description: 'MÅL! Sofie B. jr. med et kremmål! 2-1 til Fjellørn!',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 12, 7),
   },
   {
@@ -121,6 +128,7 @@ export const liveMatchEvents: MatchEvent[] = [
     minute: 55,
     player: 'Thomas B.',
     description: 'Bytte: Thomas B. inn for Magnus L.',
+    reportedBy: 'u2',
     createdAt: daysFromNow(0, 12, 10),
   },
 ];
@@ -159,6 +167,7 @@ export const events: HeiaEvent[] = [
     matchStatus: 'live',
     score: {home: 2, away: 1},
     matchEvents: liveMatchEvents,
+    reporterId: 'u2',
     rsvp: {
       coming: 12,
       notComing: 1,
