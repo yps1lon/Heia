@@ -24,11 +24,11 @@ import {
   events,
   eventAttendees,
   users,
-  currentUser,
   isAdmin,
   liveMatchEvents,
   team,
 } from '../shared/mockData';
+import {useUser} from '../context';
 import type {
   HomeStackParamList,
   RSVPStatus,
@@ -74,6 +74,7 @@ function formatDateLong(date: Date): string {
 
 export function EventDetailScreen({route}: Props) {
   const insets = useSafeAreaInsets();
+  const {user: currentUser} = useUser();
   const {eventId} = route.params;
   const event = events.find(e => e.id === eventId) ?? events[0];
   const [myStatus, setMyStatus] = useState<RSVPStatus>(event.rsvp.myStatus);
@@ -94,8 +95,8 @@ export function EventDetailScreen({route}: Props) {
   const isLiveMatch =
     event.type === 'kamp' &&
     (event.matchStatus === 'live' || event.matchStatus === 'halfTime');
-  const isCurrentUserReporter = reporterId === currentUser.id;
-  const isCurrentUserAdmin = isAdmin(currentUser.id);
+  const isCurrentUserReporter = reporterId === currentUser?.id;
+  const isCurrentUserAdmin = currentUser ? isAdmin(currentUser.id) : false;
   const reporter = reporterId
     ? users.find(u => u.id === reporterId)
     : undefined;
@@ -167,6 +168,7 @@ export function EventDetailScreen({route}: Props) {
   };
 
   const handleClaimReporter = () => {
+    if (!currentUser) return;
     setReporterId(currentUser.id);
     setPushNotification({
       visible: true,
@@ -218,7 +220,7 @@ export function EventDetailScreen({route}: Props) {
               reporter={reporter}
               isAdmin={isCurrentUserAdmin}
               isMe={isCurrentUserReporter}
-              isMember={users.some(u => u.id === currentUser.id)}
+              isMember={users.some(u => u.id === currentUser?.id)}
               onChangeReporter={() => setReporterSheetVisible(true)}
               onClaimReporter={handleClaimReporter}
             />

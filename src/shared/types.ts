@@ -108,3 +108,13 @@ export type HomeStackParamList = {
   EventDetail: {eventId: string};
   Support: undefined;
 };
+
+export type OnboardingStackParamList = {
+  Welcome: undefined;
+  UserPicker: undefined;
+};
+
+export type KalenderStackParamList = {
+  KalenderList: undefined;
+  EventDetail: {eventId: string};
+};
