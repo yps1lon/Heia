@@ -1,39 +1,62 @@
 import React from 'react';
-import {View, Text, ScrollView, StyleSheet} from 'react-native';
+import {View, Text, ScrollView, Pressable, StyleSheet, Image} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation, CommonActions} from '@react-navigation/native';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Avatar, ListRow} from '../components';
-import {useUser} from '../context';
-import {team} from '../shared/mockData';
+import {useUser, useActiveTeam} from '../context';
+import {getMemberCount} from '../data/teamData';
 
-export function MerScreen() {
+export function ProfilScreen() {
   const insets = useSafeAreaInsets();
   const {user, clearUser} = useUser();
+  const {activeTeamSpaceId, userMemberships, setActiveTeamSpace} =
+    useActiveTeam();
+  const navigation = useNavigation();
 
   if (!user) return null;
 
-  const roleName = user.role === 'trener' ? 'Trener' : 'Forelder';
+  const activeMembership = userMemberships.find(
+    m => m.teamSpaceId === activeTeamSpaceId,
+  );
+  const roleName =
+    activeMembership?.role === 'trener' ? 'Trener' : 'Forelder';
+  const isTrener = activeMembership?.role === 'trener';
+
+  function handleTeamSwitch(teamSpaceId: string) {
+    if (teamSpaceId === activeTeamSpaceId) return;
+    setActiveTeamSpace(teamSpaceId);
+    // Reset navigasjon og send bruker til Hjem
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{name: 'HjemStack'}],
+      }),
+    );
+  }
 
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={{paddingBottom: insets.bottom + spacing['3xl']}}>
       {/* Profil-seksjon */}
-      <View style={[styles.profileSection, {paddingTop: insets.top + spacing['2xl']}]}>
+      <View
+        style={[
+          styles.profileSection,
+          {paddingTop: insets.top + spacing['2xl']},
+        ]}>
         <Avatar name={user.name} size="lg" />
         <Text style={styles.userName}>{user.name}</Text>
         <View style={styles.roleRow}>
           <View
             style={[
               styles.roleBadge,
-              user.role === 'trener'
-                ? styles.roleBadgeTrener
-                : styles.roleBadgeForelder,
+              isTrener ? styles.roleBadgeTrener : styles.roleBadgeForelder,
             ]}>
             <Text
               style={[
                 styles.roleBadgeText,
-                user.role === 'trener'
+                isTrener
                   ? styles.roleBadgeTrenerText
                   : styles.roleBadgeForelderText,
               ]}>
@@ -41,17 +64,39 @@ export function MerScreen() {
             </Text>
           </View>
         </View>
+      </View>
 
-        {/* Lagkort */}
-        <View style={styles.teamCard}>
-          <Text style={styles.teamIcon}>{'  '}</Text>
-          <View style={styles.teamInfo}>
-            <Text style={styles.teamName}>{team.name}</Text>
-            <Text style={styles.teamMeta}>
-              {team.ageGroup} · {team.memberCount} medlemmer
-            </Text>
-          </View>
-        </View>
+      {/* Dine lag */}
+      <View style={styles.teamsSection}>
+        <Text style={styles.sectionTitle}>Dine lag</Text>
+        {userMemberships.map(m => {
+          const isActive = m.teamSpaceId === activeTeamSpaceId;
+          const memberCount = getMemberCount(m.teamSpaceId);
+          return (
+            <Pressable
+              key={m.id}
+              onPress={() => handleTeamSwitch(m.teamSpaceId)}
+              style={({pressed}) => [
+                styles.teamCard,
+                isActive && styles.teamCardActive,
+                pressed && styles.teamCardPressed,
+              ]}>
+              <View
+                style={[styles.teamDot, {backgroundColor: m.teamSpace.color}]}
+              />
+              <View style={styles.teamInfo}>
+                <Text style={styles.teamName}>
+                  {m.teamSpace.displayName}
+                </Text>
+                <Text style={styles.teamMeta}>
+                  {m.team.ageGroup} · {memberCount} medlemmer ·{' '}
+                  {m.role === 'trener' ? 'Trener' : 'Forelder'}
+                </Text>
+              </View>
+              {isActive && <Text style={styles.activeCheck}>✓</Text>}
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Meny */}
@@ -64,21 +109,19 @@ export function MerScreen() {
         />
         <ListRow
           icon={<Text style={styles.menuIcon}>{'  '}</Text>}
-          title="Varsler"
-          subtitle="Kommer snart"
-          showBorder
-        />
-        <ListRow
-          icon={<Text style={styles.menuIcon}>{'  '}</Text>}
           title="Om Heia"
           subtitle="v0.1.0"
           showBorder={false}
         />
       </View>
 
-      {/* Heia footer */}
+      {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerLogo}>Heia</Text>
+        <Image
+          source={require('../assets/images/logo-green.png')}
+          style={styles.footerLogo}
+          resizeMode="contain"
+        />
         <Text style={styles.footerTagline}>Idrettsglede for alle</Text>
       </View>
     </ScrollView>
@@ -126,18 +169,35 @@ const styles = StyleSheet.create({
   roleBadgeForelderText: {
     color: colors.textSecondary,
   },
+  teamsSection: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  sectionTitle: {
+    ...typography.label,
+    marginBottom: spacing.xs,
+  },
   teamCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.lg,
-    marginTop: spacing.md,
-    width: '100%',
     gap: spacing.md,
+    ...shadows.card,
   },
-  teamIcon: {
-    fontSize: 28,
+  teamCardActive: {
+    borderWidth: 2,
+    borderColor: colors.heia,
+  },
+  teamCardPressed: {
+    opacity: 0.7,
+  },
+  teamDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   teamInfo: {
     flex: 1,
@@ -149,6 +209,11 @@ const styles = StyleSheet.create({
   teamMeta: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+  },
+  activeCheck: {
+    fontSize: 18,
+    color: colors.heiaPressed,
+    fontWeight: '700',
   },
   menuSection: {
     backgroundColor: colors.surface,
@@ -166,10 +231,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footerLogo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.heia,
-    letterSpacing: -1,
+    width: 100,
+    height: 100,
   },
   footerTagline: {
     ...typography.bodySmall,

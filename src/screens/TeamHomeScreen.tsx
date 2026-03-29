@@ -11,13 +11,17 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useNavigation} from '@react-navigation/native';
 import {colors, typography, spacing, radius} from '../theme';
 import {
-  Avatar,
   SectionHeader,
   FeedCard,
   Button,
   LiveMatchBanner,
+  TeamHeader,
 } from '../components';
-import {team, events, feedItems} from '../shared/mockData';
+import {useActiveTeam} from '../context';
+import {
+  getEventsForTeamSpace,
+  getFeedForTeamSpace,
+} from '../data/teamData';
 import type {HomeStackParamList} from '../shared/types';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, 'TeamHome'>;
@@ -26,14 +30,20 @@ export function TeamHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const [refreshing, setRefreshing] = useState(false);
+  const {activeTeamSpace, activeTeamSpaceId} = useActiveTeam();
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1200);
   }, []);
 
+  if (!activeTeamSpace || !activeTeamSpaceId) return null;
+
+  const teamEvents = getEventsForTeamSpace(activeTeamSpaceId);
+  const teamFeed = getFeedForTeamSpace(activeTeamSpaceId);
+
   // Finn live kamp
-  const liveMatch = events.find(
+  const liveMatch = teamEvents.find(
     e => e.type === 'kamp' && e.matchStatus === 'live',
   );
 
@@ -48,16 +58,8 @@ export function TeamHomeScreen() {
           tintColor={colors.heia}
         />
       }>
-      {/* Lag-header */}
-      <View style={[styles.teamHeader, {paddingTop: insets.top + spacing.lg}]}>
-        <Avatar name={team.name} size="lg" />
-        <View style={styles.teamInfo}>
-          <Text style={styles.teamName}>{team.name}</Text>
-          <Text style={styles.teamMeta}>
-            {team.ageGroup} · {team.memberCount} medlemmer
-          </Text>
-        </View>
-      </View>
+      {/* Team-header (kompakt) */}
+      <TeamHeader />
 
       {/* Live kamp-banner — HERO */}
       {liveMatch && (
@@ -73,7 +75,7 @@ export function TeamHomeScreen() {
 
       {/* Feed — hovedinnhold */}
       <SectionHeader title="Siste fra laget" />
-      {feedItems.map(item => (
+      {teamFeed.map(item => (
         <View key={item.id} style={styles.cardWrap}>
           <FeedCard item={item} />
         </View>
@@ -81,7 +83,9 @@ export function TeamHomeScreen() {
 
       {/* Støtt laget */}
       <View style={styles.supportCard}>
-        <Text style={styles.supportTitle}>Støtt {team.name}</Text>
+        <Text style={styles.supportTitle}>
+          Støtt {activeTeamSpace.displayName}
+        </Text>
         <Text style={styles.supportText}>
           Hjelp laget med å dekke utgifter til kamper, utstyr og sosiale
           arrangementer.
@@ -100,25 +104,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  teamHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    gap: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  teamInfo: {
-    flex: 1,
-  },
-  teamName: {
-    ...typography.heading1,
-  },
-  teamMeta: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   section: {
     paddingHorizontal: spacing.lg,

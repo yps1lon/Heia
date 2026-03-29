@@ -20,19 +20,18 @@ import {
   SimulatedPush,
 } from '../components';
 import type {ReporterActionType} from '../components/ReporterActions';
+import {useUser, useActiveTeam} from '../context';
 import {
-  events,
-  eventAttendees,
-  users,
-  isAdmin,
-  liveMatchEvents,
-  team,
-} from '../shared/mockData';
-import {useUser} from '../context';
+  getEventsForTeamSpace,
+  getMembersForTeamSpace,
+  getUserRoleInTeam,
+} from '../data/teamData';
+import {eventAttendees, liveMatchEvents} from '../shared/mockData';
 import type {
   HomeStackParamList,
   RSVPStatus,
   User,
+  UserRole,
 } from '../shared/types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'EventDetail'>;
@@ -75,16 +74,28 @@ function formatDateLong(date: Date): string {
 export function EventDetailScreen({route}: Props) {
   const insets = useSafeAreaInsets();
   const {user: currentUser} = useUser();
+  const {activeTeamSpaceId, activeTeamSpace} = useActiveTeam();
   const {eventId} = route.params;
-  const event = events.find(e => e.id === eventId) ?? events[0];
-  const [myStatus, setMyStatus] = useState<RSVPStatus>(event.rsvp.myStatus);
+
+  const teamEvents = activeTeamSpaceId
+    ? getEventsForTeamSpace(activeTeamSpaceId)
+    : [];
+  const event = teamEvents.find(e => e.id === eventId) ?? teamEvents[0];
+  const teamMembers = activeTeamSpaceId
+    ? getMembersForTeamSpace(activeTeamSpaceId)
+    : [];
+  const teamName = activeTeamSpace?.displayName ?? '';
+
+  const [myStatus, setMyStatus] = useState<RSVPStatus>(
+    event?.rsvp.myStatus ?? 'venter',
+  );
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [reporterModalVisible, setReporterModalVisible] = useState(false);
   const [reporterSheetVisible, setReporterSheetVisible] = useState(false);
   const [selectedActionType, setSelectedActionType] =
     useState<ReporterActionType>('mål_oss');
   const [reporterId, setReporterId] = useState<string | undefined>(
-    event.reporterId,
+    event?.reporterId,
   );
   const [pushNotification, setPushNotification] = useState({
     visible: false,
@@ -92,23 +103,29 @@ export function EventDetailScreen({route}: Props) {
     message: '',
   });
 
+  if (!event) return null;
+
   const isLiveMatch =
     event.type === 'kamp' &&
     (event.matchStatus === 'live' || event.matchStatus === 'halfTime');
   const isCurrentUserReporter = reporterId === currentUser?.id;
-  const isCurrentUserAdmin = currentUser ? isAdmin(currentUser.id) : false;
+  const currentUserRole =
+    currentUser && activeTeamSpaceId
+      ? getUserRoleInTeam(currentUser.id, activeTeamSpaceId)
+      : null;
+  const isCurrentUserAdmin = currentUserRole === 'trener';
   const reporter = reporterId
-    ? users.find(u => u.id === reporterId)
+    ? teamMembers.find(u => u.id === reporterId)
     : undefined;
 
   // Oppmøteliste
   const attendees = eventAttendees[eventId as keyof typeof eventAttendees] ?? {
-    coming: users.slice(0, event.rsvp.coming),
-    notComing: users.slice(
+    coming: teamMembers.slice(0, event.rsvp.coming),
+    notComing: teamMembers.slice(
       event.rsvp.coming,
       event.rsvp.coming + event.rsvp.notComing,
     ),
-    pending: users.slice(
+    pending: teamMembers.slice(
       event.rsvp.coming + event.rsvp.notComing,
       event.rsvp.coming + event.rsvp.notComing + event.rsvp.pending,
     ),
@@ -131,12 +148,11 @@ export function EventDetailScreen({route}: Props) {
   };
 
   const handleReporterAction = (type: ReporterActionType) => {
-    // Pause and slutt: confirm directly, no modal needed
     if (type === 'pause' || type === 'slutt') {
       const label = type === 'pause' ? 'Pause' : 'Kampen er ferdig';
       setPushNotification({
         visible: true,
-        title: `${team.name} · ${label}`,
+        title: `${teamName} · ${label}`,
         message:
           type === 'pause'
             ? `Pause. ${event.score?.home}-${event.score?.away}.`
@@ -162,7 +178,7 @@ export function EventDetailScreen({route}: Props) {
 
     setPushNotification({
       visible: true,
-      title: `${team.name} · ${actionLabels[selectedActionType]}`,
+      title: `${teamName} · ${actionLabels[selectedActionType]}`,
       message: description || event.title,
     });
   };
@@ -180,7 +196,7 @@ export function EventDetailScreen({route}: Props) {
   const handleSelectReporter = (userId: string) => {
     setReporterId(userId);
     setReporterSheetVisible(false);
-    const selected = users.find(u => u.id === userId);
+    const selected = teamMembers.find(u => u.id === userId);
     if (selected) {
       setPushNotification({
         visible: true,
@@ -205,7 +221,7 @@ export function EventDetailScreen({route}: Props) {
           {/* Scoreboard */}
           <View style={styles.section}>
             <ScoreBoard
-              homeTeam={team.name}
+              homeTeam={teamName}
               awayTeam={event.opponent}
               homeScore={event.score.home}
               awayScore={event.score.away}
@@ -220,7 +236,7 @@ export function EventDetailScreen({route}: Props) {
               reporter={reporter}
               isAdmin={isCurrentUserAdmin}
               isMe={isCurrentUserReporter}
-              isMember={users.some(u => u.id === currentUser?.id)}
+              isMember={teamMembers.some(u => u.id === currentUser?.id)}
               onChangeReporter={() => setReporterSheetVisible(true)}
               onClaimReporter={handleClaimReporter}
             />
@@ -302,7 +318,7 @@ export function EventDetailScreen({route}: Props) {
         {/* Reporter-velger */}
         <ReporterSheet
           visible={reporterSheetVisible}
-          members={users}
+          members={teamMembers}
           currentReporterId={reporterId}
           onSelect={handleSelectReporter}
           onClose={() => setReporterSheetVisible(false)}
@@ -396,7 +412,7 @@ function AttendanceSection({
   emptyText,
 }: {
   title: string;
-  users: User[];
+  users: (User & {role?: UserRole})[];
   emptyText?: string;
 }) {
   return (

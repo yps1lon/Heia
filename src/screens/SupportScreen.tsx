@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
-import {View, Text, ScrollView, Pressable, StyleSheet} from 'react-native';
+import {View, Text, ScrollView, Pressable, StyleSheet, Image} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Button} from '../components';
-import {team} from '../shared/mockData';
+import {useActiveTeam} from '../context';
 
 type Plan = 'monthly' | 'yearly';
 
@@ -23,6 +23,9 @@ export function SupportScreen() {
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState<Plan>('yearly');
   const [loading, setLoading] = useState(false);
+  const {activeTeamSpace} = useActiveTeam();
+
+  const teamName = activeTeamSpace?.displayName ?? 'Laget';
 
   const handleStart = () => {
     setLoading(true);
@@ -39,9 +42,13 @@ export function SupportScreen() {
       {/* Illustrasjon */}
       <View style={styles.hero}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconEmoji}>💚</Text>
+          <Image
+            source={require('../assets/images/logo-icon.png')}
+            style={styles.logoIcon}
+            resizeMode="contain"
+          />
         </View>
-        <Text style={styles.heading}>Støtt {team.name}</Text>
+        <Text style={styles.heading}>Støtt {teamName}</Text>
         <Text style={styles.subheading}>
           Mesteparten av ditt bidrag går direkte til laget
         </Text>
@@ -58,7 +65,7 @@ export function SupportScreen() {
           </View>
         </View>
         <Text style={styles.splitCaption}>
-          {team.name} mottar størstedelen av bidraget ditt. Resten dekker drift av
+          {teamName} mottar størstedelen av bidraget ditt. Resten dekker drift av
           Heia-plattformen.
         </Text>
       </View>
@@ -171,16 +178,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   iconCircle: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
     borderRadius: radius.full,
     backgroundColor: colors.heiaSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  iconEmoji: {
-    fontSize: 32,
+  logoIcon: {
+    width: 52,
+    height: 52,
   },
   heading: {
     ...typography.heading1,

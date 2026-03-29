@@ -11,12 +11,14 @@ import {SupportScreen} from '../screens/SupportScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
 import {UserPickerScreen} from '../screens/UserPickerScreen';
 import {KalenderScreen} from '../screens/KalenderScreen';
-import {MerScreen} from '../screens/MerScreen';
+import {ProfilScreen} from '../screens/ProfilScreen';
+import {InboxScreen} from '../screens/InboxScreen';
 import type {
   RootTabParamList,
   HomeStackParamList,
   OnboardingStackParamList,
   KalenderStackParamList,
+  ProfilStackParamList,
 } from '../shared/types';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -24,6 +26,7 @@ const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const OnboardingNav =
   createNativeStackNavigator<OnboardingStackParamList>();
 const KalenderNav = createNativeStackNavigator<KalenderStackParamList>();
+const ProfilNav = createNativeStackNavigator<ProfilStackParamList>();
 
 // ---------------------------------------------------------------------------
 // Felles stack-innstillinger
@@ -82,6 +85,17 @@ function KalenderStackNavigator() {
 }
 
 // ---------------------------------------------------------------------------
+// Profil stack
+// ---------------------------------------------------------------------------
+function ProfilStackNavigator() {
+  return (
+    <ProfilNav.Navigator screenOptions={{headerShown: false}}>
+      <ProfilNav.Screen name="Profil" component={ProfilScreen} />
+    </ProfilNav.Navigator>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Onboarding stack (velkommen + brukervelger)
 // ---------------------------------------------------------------------------
 function OnboardingStackNavigator() {
@@ -94,22 +108,15 @@ function OnboardingStackNavigator() {
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder-skjerm for tabs som ikke er implementert ennå
+// Placeholder for Opprett-tab
 // ---------------------------------------------------------------------------
-function PlaceholderScreen({title}: {title: string}) {
+function OpprettScreen() {
   return (
     <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>{title}</Text>
+      <Text style={styles.placeholderText}>Ny hendelse</Text>
       <Text style={styles.placeholderSub}>Kommer snart</Text>
     </View>
   );
-}
-
-function OpprettScreen() {
-  return <PlaceholderScreen title="Ny hendelse" />;
-}
-function MeldingerScreen() {
-  return <PlaceholderScreen title="Meldinger" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,10 +124,10 @@ function MeldingerScreen() {
 // ---------------------------------------------------------------------------
 const tabIcons: Record<keyof RootTabParamList, string> = {
   HjemStack: '⌂',
-  Kalender: '▦',
+  KalenderStack: '▦',
   Opprett: '+',
-  Meldinger: '✉',
-  Mer: '⋯',
+  Inbox: '✉',
+  ProfilStack: '●',
 };
 
 // ---------------------------------------------------------------------------
@@ -153,8 +160,9 @@ function MainTabs() {
         options={{tabBarLabel: 'Hjem'}}
       />
       <Tab.Screen
-        name="Kalender"
+        name="KalenderStack"
         component={KalenderStackNavigator}
+        options={{tabBarLabel: 'Kalender'}}
       />
       <Tab.Screen
         name="Opprett"
@@ -162,12 +170,13 @@ function MainTabs() {
         options={{tabBarLabel: ''}}
       />
       <Tab.Screen
-        name="Meldinger"
-        component={MeldingerScreen}
+        name="Inbox"
+        component={InboxScreen}
       />
       <Tab.Screen
-        name="Mer"
-        component={MerScreen}
+        name="ProfilStack"
+        component={ProfilStackNavigator}
+        options={{tabBarLabel: 'Profil'}}
       />
     </Tab.Navigator>
   );
