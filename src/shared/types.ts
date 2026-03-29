@@ -40,19 +40,48 @@ export interface MatchEvent {
 // ---------------------------------------------------------------------------
 // Datamodeller
 // ---------------------------------------------------------------------------
+
+/** Kanonisk lag — representerer et virkelig lag i den virkelige verden */
 export interface Team {
   id: string;
-  name: string;
+  club: string;
+  teamName: string;
   sport: SportType;
   ageGroup: string;
+}
+
+/** Heia-rom — opprettes når noen aktiverer laget i Heia */
+export interface TeamSpace {
+  id: string;
+  teamId: string;
+  displayName: string;
   color: string;
   logoUrl?: string;
-  memberCount: number;
+  inviteCode: string;
+  isActivated: boolean;
+  activatedAt?: Date;
+  createdAt: Date;
+}
+
+/** Kobling mellom bruker og lagrom */
+export interface Membership {
+  id: string;
+  userId: string;
+  teamSpaceId: string;
+  role: UserRole;
+  joinedAt: Date;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  role?: UserRole; // deprecated — bruk Membership.role per lag
+  avatarUrl?: string;
 }
 
 export interface HeiaEvent {
   id: string;
-  teamId: string;
+  teamSpaceId: string;
   type: EventType;
   title: string;
   startTime: Date;
@@ -74,17 +103,18 @@ export interface RSVPSummary {
   myStatus: RSVPStatus;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  role: UserRole;
-  avatarUrl?: string;
-}
-
 export interface FeedItem {
   id: string;
-  type: 'melding' | 'bilde' | 'paaminnelse' | 'resultat' | 'match_event' | 'match_start' | 'match_end';
-  author: User;
+  teamSpaceId: string;
+  type:
+    | 'melding'
+    | 'bilde'
+    | 'paaminnelse'
+    | 'resultat'
+    | 'match_event'
+    | 'match_start'
+    | 'match_end';
+  author: User & {role?: UserRole};
   createdAt: Date;
   content: string;
   imageUrl?: string;
@@ -97,10 +127,10 @@ export interface FeedItem {
 // ---------------------------------------------------------------------------
 export type RootTabParamList = {
   HjemStack: undefined;
-  Kalender: undefined;
+  KalenderStack: undefined;
   Opprett: undefined;
-  Meldinger: undefined;
-  Mer: undefined;
+  Inbox: undefined;
+  ProfilStack: undefined;
 };
 
 export type HomeStackParamList = {
@@ -117,4 +147,8 @@ export type OnboardingStackParamList = {
 export type KalenderStackParamList = {
   KalenderList: undefined;
   EventDetail: {eventId: string};
+};
+
+export type ProfilStackParamList = {
+  Profil: undefined;
 };

@@ -4,9 +4,10 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {colors, typography, spacing} from '../theme';
-import {EventCard, LiveBadge} from '../components';
-import {events} from '../shared/mockData';
-import type {KalenderStackParamList} from '../shared/types';
+import {EventCard, LiveBadge, TeamHeader} from '../components';
+import {useActiveTeam} from '../context';
+import {getEventsForTeamSpace} from '../data/teamData';
+import type {KalenderStackParamList, HeiaEvent} from '../shared/types';
 
 type Nav = NativeStackNavigationProp<KalenderStackParamList, 'KalenderList'>;
 
@@ -32,13 +33,17 @@ function getSectionLabel(date: Date): string {
 export function KalenderScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
+  const {activeTeamSpaceId} = useActiveTeam();
 
-  const sortedEvents = [...events].sort(
+  if (!activeTeamSpaceId) return null;
+
+  const teamEvents = getEventsForTeamSpace(activeTeamSpaceId);
+  const sortedEvents = [...teamEvents].sort(
     (a, b) => a.startTime.getTime() - b.startTime.getTime(),
   );
 
   // Grupper etter seksjon
-  const sections: {label: string; events: typeof events}[] = [];
+  const sections: {label: string; events: HeiaEvent[]}[] = [];
   let currentLabel = '';
   for (const event of sortedEvents) {
     const label = getSectionLabel(event.startTime);
@@ -51,42 +56,43 @@ export function KalenderScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={{
-        paddingTop: insets.top + spacing.lg,
-        paddingBottom: insets.bottom + spacing['3xl'],
-      }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Kalender</Text>
-        <Text style={styles.subtitle}>Kommende hendelser for laget</Text>
-      </View>
-
-      {/* Seksjoner */}
-      {sections.map(section => (
-        <View key={section.label}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{section.label}</Text>
-            {section.label === 'I dag' &&
-              section.events.some(e => e.matchStatus === 'live') && (
-                <LiveBadge />
-              )}
-          </View>
-          {section.events.map(event => (
-            <View key={event.id} style={styles.cardWrap}>
-              <EventCard
-                event={event}
-                featured={event.matchStatus === 'live'}
-                onPress={() =>
-                  navigation.navigate('EventDetail', {eventId: event.id})
-                }
-              />
-            </View>
-          ))}
+    <View style={styles.screen}>
+      <TeamHeader />
+      <ScrollView
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + spacing['3xl'],
+        }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Kalender</Text>
+          <Text style={styles.subtitle}>Kommende hendelser for laget</Text>
         </View>
-      ))}
-    </ScrollView>
+
+        {/* Seksjoner */}
+        {sections.map(section => (
+          <View key={section.label}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>{section.label}</Text>
+              {section.label === 'I dag' &&
+                section.events.some(e => e.matchStatus === 'live') && (
+                  <LiveBadge />
+                )}
+            </View>
+            {section.events.map(event => (
+              <View key={event.id} style={styles.cardWrap}>
+                <EventCard
+                  event={event}
+                  featured={event.matchStatus === 'live'}
+                  onPress={() =>
+                    navigation.navigate('EventDetail', {eventId: event.id})
+                  }
+                />
+              </View>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -97,6 +103,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     marginBottom: spacing.xl,
   },
   title: {

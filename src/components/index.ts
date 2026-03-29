@@ -16,3 +16,4 @@ export {ReporterModal} from './ReporterModal';
 export {ReporterBar} from './ReporterBar';
 export {ReporterSheet} from './ReporterSheet';
 export {SimulatedPush} from './SimulatedPush';
+export {TeamHeader} from './TeamHeader';

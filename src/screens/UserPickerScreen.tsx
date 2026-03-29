@@ -10,18 +10,26 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Avatar} from '../components';
 import {useUser} from '../context';
-import {users} from '../shared/mockData';
+import {users, memberships} from '../shared/mockData';
 import type {User} from '../shared/types';
+
+// Finn "primær" rolle for en bruker (trener i noe lag → trener, ellers forelder)
+function getPrimaryRole(userId: string): 'trener' | 'forelder' {
+  const userMemberships = memberships.filter(m => m.userId === userId);
+  if (userMemberships.some(m => m.role === 'trener')) return 'trener';
+  return 'forelder';
+}
 
 export function UserPickerScreen() {
   const insets = useSafeAreaInsets();
   const {setUser} = useUser();
 
-  const coach = users.find(u => u.role === 'trener');
-  const parents = users.filter(u => u.role !== 'trener');
+  const coaches = users.filter(u => getPrimaryRole(u.id) === 'trener');
+  const parents = users.filter(u => getPrimaryRole(u.id) !== 'trener');
 
   const handleSelect = (user: User) => {
     setUser(user);
+    // TeamContext auto-velger første lag via useEffect
   };
 
   const renderParent = ({item, index}: {item: User; index: number}) => {
@@ -55,9 +63,9 @@ export function UserPickerScreen() {
         </Text>
       </View>
 
-      {/* Trener — featured kort */}
-      {coach && (
-        <View style={styles.coachSection}>
+      {/* Trenere — featured kort */}
+      {coaches.map(coach => (
+        <View key={coach.id} style={styles.coachSection}>
           <Pressable
             style={({pressed}) => [
               styles.coachCard,
@@ -74,7 +82,7 @@ export function UserPickerScreen() {
             <Text style={styles.coachArrow}>{'>'}</Text>
           </Pressable>
         </View>
-      )}
+      ))}
 
       {/* Seksjonstittel */}
       <View style={styles.sectionHeader}>
