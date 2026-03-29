@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {View, Text, Pressable, StyleSheet, Animated} from 'react-native';
+import {View, Text, Pressable, StyleSheet, Animated, Image} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useNavigation} from '@react-navigation/native';
@@ -42,17 +42,6 @@ export function WelcomeScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.content, {paddingTop: insets.top + spacing['5xl']}]}>
-        {/* Sport-ikoner i bakgrunnen for stemning */}
-        <Animated.View
-          style={[
-            styles.sportIcons,
-            {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
-          ]}>
-          <Text style={styles.sportEmoji}>
-            {'  '}
-          </Text>
-        </Animated.View>
-
         {/* Heia logo */}
         <Animated.View
           style={{
@@ -60,7 +49,11 @@ export function WelcomeScreen() {
             transform: [{translateY: slideAnim}],
             alignItems: 'center',
           }}>
-          <Text style={styles.logo}>Heia</Text>
+          <Image
+            source={require('../assets/images/logo-dark.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.tagline}>Idrettsglede for alle</Text>
         </Animated.View>
       </View>
@@ -89,7 +82,7 @@ export function WelcomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.heia,
+    backgroundColor: colors.textPrimary,
   },
   content: {
     flex: 1,
@@ -97,23 +90,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing['3xl'],
   },
-  sportIcons: {
-    marginBottom: spacing['3xl'],
-  },
-  sportEmoji: {
-    fontSize: 40,
-    letterSpacing: 8,
-  },
   logo: {
-    fontSize: 72,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -2,
+    width: 280,
+    height: 280,
   },
   tagline: {
     ...typography.heading3,
-    color: colors.textPrimary,
-    opacity: 0.7,
+    color: colors.surface,
+    opacity: 0.6,
     marginTop: spacing.sm,
   },
   buttonContainer: {
@@ -122,7 +106,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.heia,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['3xl'],
     borderRadius: radius.xl,
@@ -134,11 +118,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...typography.heading3,
-    color: colors.surface,
+    color: colors.textPrimary,
   },
   footerText: {
     ...typography.bodySmall,
-    color: colors.textPrimary,
+    color: colors.surface,
     opacity: 0.5,
   },
 });
