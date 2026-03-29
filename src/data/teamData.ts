@@ -69,3 +69,65 @@ export function getTeamForSpace(teamSpaceId: string): Team | null {
 export function getMemberCount(teamSpaceId: string): number {
   return memberships.filter(m => m.teamSpaceId === teamSpaceId).length;
 }
+
+export function getAllTeams(): Team[] {
+  return teams;
+}
+
+export function getTeamSpaceForTeam(teamId: string): TeamSpace | null {
+  return teamSpaces.find(ts => ts.teamId === teamId) ?? null;
+}
+
+export function activateTeam(
+  teamId: string,
+  userId: string,
+  role: UserRole,
+): {teamSpace: TeamSpace; membership: Membership} {
+  const team = teams.find(t => t.id === teamId)!;
+  const now = new Date();
+
+  const newTeamSpace: TeamSpace = {
+    id: `ts${teamSpaces.length + 1}`,
+    teamId,
+    displayName: `${team.club} ${team.teamName}`,
+    color: '#6366F1',
+    inviteCode: `${team.teamName.replace(/\s/g, '')}${Date.now() % 1000}`,
+    isActivated: true,
+    activatedAt: now,
+    createdAt: now,
+  };
+  teamSpaces.push(newTeamSpace);
+
+  const newMembership: Membership = {
+    id: `m${memberships.length + 1}`,
+    userId,
+    teamSpaceId: newTeamSpace.id,
+    role,
+    joinedAt: now,
+  };
+  memberships.push(newMembership);
+
+  return {teamSpace: newTeamSpace, membership: newMembership};
+}
+
+export function joinTeamSpace(
+  teamSpaceId: string,
+  userId: string,
+  role: UserRole,
+): Membership {
+  const existing = memberships.find(
+    m => m.userId === userId && m.teamSpaceId === teamSpaceId,
+  );
+  if (existing) return existing;
+
+  const now = new Date();
+  const newMembership: Membership = {
+    id: `m${memberships.length + 1}`,
+    userId,
+    teamSpaceId,
+    role,
+    joinedAt: now,
+  };
+  memberships.push(newMembership);
+  return newMembership;
+}
