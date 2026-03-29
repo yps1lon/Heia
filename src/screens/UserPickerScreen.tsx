@@ -7,11 +7,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Avatar} from '../components';
-import {useUser} from '../context';
 import {users, memberships} from '../shared/mockData';
-import type {User} from '../shared/types';
+import type {User, OnboardingStackParamList} from '../shared/types';
+
+type Nav = NativeStackNavigationProp<OnboardingStackParamList, 'UserPicker'>;
 
 // Finn "primær" rolle for en bruker (trener i noe lag → trener, ellers forelder)
 function getPrimaryRole(userId: string): 'trener' | 'forelder' {
@@ -22,14 +25,13 @@ function getPrimaryRole(userId: string): 'trener' | 'forelder' {
 
 export function UserPickerScreen() {
   const insets = useSafeAreaInsets();
-  const {setUser} = useUser();
+  const navigation = useNavigation<Nav>();
 
   const coaches = users.filter(u => getPrimaryRole(u.id) === 'trener');
   const parents = users.filter(u => getPrimaryRole(u.id) !== 'trener');
 
   const handleSelect = (user: User) => {
-    setUser(user);
-    // TeamContext auto-velger første lag via useEffect
+    navigation.navigate('FindTeam', {userId: user.id});
   };
 
   const renderParent = ({item, index}: {item: User; index: number}) => {

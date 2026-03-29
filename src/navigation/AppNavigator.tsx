@@ -10,6 +10,8 @@ import {EventDetailScreen} from '../screens/EventDetailScreen';
 import {SupportScreen} from '../screens/SupportScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
 import {UserPickerScreen} from '../screens/UserPickerScreen';
+import {FindTeamScreen} from '../screens/FindTeamScreen';
+import {TeamJoinScreen} from '../screens/TeamJoinScreen';
 import {KalenderScreen} from '../screens/KalenderScreen';
 import {ProfilScreen} from '../screens/ProfilScreen';
 import {InboxScreen} from '../screens/InboxScreen';
@@ -103,6 +105,8 @@ function OnboardingStackNavigator() {
     <OnboardingNav.Navigator screenOptions={{headerShown: false}}>
       <OnboardingNav.Screen name="Welcome" component={WelcomeScreen} />
       <OnboardingNav.Screen name="UserPicker" component={UserPickerScreen} />
+      <OnboardingNav.Screen name="FindTeam" component={FindTeamScreen} />
+      <OnboardingNav.Screen name="TeamJoin" component={TeamJoinScreen} />
     </OnboardingNav.Navigator>
   );
 }
