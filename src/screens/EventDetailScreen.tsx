@@ -20,7 +20,7 @@ import {
   SimulatedPush,
 } from '../components';
 import type {ReporterActionType} from '../components/ReporterActions';
-import {useUser, useActiveTeam} from '../context';
+import {useAuth, useActiveTeam} from '../context';
 import {
   getEventsForTeamSpace,
   getMembersForTeamSpace,
@@ -73,7 +73,7 @@ function formatDateLong(date: Date): string {
 
 export function EventDetailScreen({route}: Props) {
   const insets = useSafeAreaInsets();
-  const {user: currentUser} = useUser();
+  const {profile: currentUser} = useAuth();
   const {activeTeamSpaceId, activeTeamSpace} = useActiveTeam();
   const {eventId} = route.params;
 

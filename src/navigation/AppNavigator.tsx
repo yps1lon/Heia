@@ -1,15 +1,15 @@
 import React from 'react';
-import {Text, StyleSheet, View} from 'react-native';
+import {Text, StyleSheet, View, ActivityIndicator} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {colors, typography, spacing} from '../theme';
-import {useUser} from '../context';
+import {useAuth, useActiveTeam} from '../context';
 import {TeamHomeScreen} from '../screens/TeamHomeScreen';
 import {EventDetailScreen} from '../screens/EventDetailScreen';
 import {SupportScreen} from '../screens/SupportScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
-import {UserPickerScreen} from '../screens/UserPickerScreen';
+import {AuthScreen} from '../screens/AuthScreen';
 import {FindTeamScreen} from '../screens/FindTeamScreen';
 import {TeamJoinScreen} from '../screens/TeamJoinScreen';
 import {KalenderScreen} from '../screens/KalenderScreen';
@@ -98,13 +98,15 @@ function ProfilStackNavigator() {
 }
 
 // ---------------------------------------------------------------------------
-// Onboarding stack (velkommen + brukervelger)
+// Onboarding stack (velkommen + auth + team join)
 // ---------------------------------------------------------------------------
-function OnboardingStackNavigator() {
+function OnboardingStackNavigator({initialRoute}: {initialRoute: keyof OnboardingStackParamList}) {
   return (
-    <OnboardingNav.Navigator screenOptions={{headerShown: false}}>
+    <OnboardingNav.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{headerShown: false}}>
       <OnboardingNav.Screen name="Welcome" component={WelcomeScreen} />
-      <OnboardingNav.Screen name="UserPicker" component={UserPickerScreen} />
+      <OnboardingNav.Screen name="Auth" component={AuthScreen} />
       <OnboardingNav.Screen name="FindTeam" component={FindTeamScreen} />
       <OnboardingNav.Screen name="TeamJoin" component={TeamJoinScreen} />
     </OnboardingNav.Navigator>
@@ -187,14 +189,36 @@ function MainTabs() {
 }
 
 // ---------------------------------------------------------------------------
+// Loading screen mens session sjekkes
+// ---------------------------------------------------------------------------
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingScreen}>
+      <ActivityIndicator size="large" color={colors.heia} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Rot-navigator — betinget onboarding vs. hoved-app
 // ---------------------------------------------------------------------------
 export function AppNavigator() {
-  const {user} = useUser();
+  const {session, profile, loading} = useAuth();
+  const {userMemberships, loading: teamLoading} = useActiveTeam();
+
+  if (loading || (session && teamLoading)) {
+    return <LoadingScreen />;
+  }
+
+  const hasTeam = userMemberships.length > 0;
 
   return (
     <NavigationContainer>
-      {user ? <MainTabs /> : <OnboardingStackNavigator />}
+      {session && profile && hasTeam ? (
+        <MainTabs />
+      ) : (
+        <OnboardingStackNavigator key={session ? 'authed' : 'guest'} initialRoute={session ? 'FindTeam' : 'Welcome'} />
+      )}
     </NavigationContainer>
   );
 }
@@ -246,5 +270,11 @@ const styles = StyleSheet.create({
   placeholderSub: {
     ...typography.bodySmall,
     color: colors.textTertiary,
+  },
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

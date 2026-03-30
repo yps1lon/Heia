@@ -1,2 +1,2 @@
-export {UserProvider, useUser} from './UserContext';
+export {AuthProvider, useAuth} from './UserContext';
 export {TeamProvider, useActiveTeam} from './TeamContext';

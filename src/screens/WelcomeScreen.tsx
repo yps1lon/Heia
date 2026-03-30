@@ -69,7 +69,7 @@ export function WelcomeScreen() {
             styles.button,
             pressed && styles.buttonPressed,
           ]}
-          onPress={() => navigation.navigate('UserPicker')}>
+          onPress={() => navigation.navigate('Auth')}>
           <Text style={styles.buttonText}>Kom i gang</Text>
         </Pressable>
 
