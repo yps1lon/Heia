@@ -7,42 +7,70 @@ import React, {
   useState,
   type PropsWithChildren,
 } from 'react';
-import type {Membership, Team, TeamSpace} from '../shared/types';
-import {getMembershipsForUser} from '../data/teamData';
-import {useUser} from './UserContext';
-
-type EnrichedMembership = Membership & {teamSpace: TeamSpace; team: Team};
+import {useAuth} from './UserContext';
+import {getUserMemberships} from '../lib/api/teams';
+import type {
+  EnrichedMembership,
+  TeamSpace,
+  Team,
+} from '../lib/types';
 
 interface TeamContextValue {
   activeTeamSpaceId: string | null;
   activeTeamSpace: TeamSpace | null;
   activeTeam: Team | null;
   userMemberships: EnrichedMembership[];
+  loading: boolean;
   setActiveTeamSpace: (teamSpaceId: string) => void;
+  refreshMemberships: () => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextValue | undefined>(undefined);
 
 export function TeamProvider({children}: PropsWithChildren) {
-  const {user} = useUser();
+  const {session} = useAuth();
   const [activeTeamSpaceId, setActiveTeamSpaceId] = useState<string | null>(
     null,
   );
+  const [userMemberships, setUserMemberships] = useState<
+    EnrichedMembership[]
+  >([]);
+  const [loading, setLoading] = useState(false);
 
-  const userMemberships = useMemo<EnrichedMembership[]>(() => {
-    if (!user) return [];
-    return getMembershipsForUser(user.id);
-  }, [user]);
+  const fetchMemberships = useCallback(async () => {
+    if (!session?.user) {
+      setUserMemberships([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const memberships = await getUserMemberships();
+      setUserMemberships(memberships);
+    } catch {
+      setUserMemberships([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.user?.id]);
+
+  // Hent memberships når session endres
+  useEffect(() => {
+    fetchMemberships();
+  }, [fetchMemberships]);
 
   // Auto-velg første lag ved innlogging
   useEffect(() => {
-    if (user && userMemberships.length > 0 && !activeTeamSpaceId) {
+    if (
+      session?.user &&
+      userMemberships.length > 0 &&
+      !activeTeamSpaceId
+    ) {
       setActiveTeamSpaceId(userMemberships[0].teamSpaceId);
     }
-    if (!user) {
+    if (!session?.user) {
       setActiveTeamSpaceId(null);
     }
-  }, [user, userMemberships, activeTeamSpaceId]);
+  }, [session?.user, userMemberships, activeTeamSpaceId]);
 
   const activeTeamSpace = useMemo(
     () =>
@@ -53,8 +81,8 @@ export function TeamProvider({children}: PropsWithChildren) {
 
   const activeTeam = useMemo(
     () =>
-      userMemberships.find(m => m.teamSpaceId === activeTeamSpaceId)?.team ??
-      null,
+      userMemberships.find(m => m.teamSpaceId === activeTeamSpaceId)
+        ?.team ?? null,
     [userMemberships, activeTeamSpaceId],
   );
 
@@ -69,7 +97,9 @@ export function TeamProvider({children}: PropsWithChildren) {
         activeTeamSpace,
         activeTeam,
         userMemberships,
+        loading,
         setActiveTeamSpace,
+        refreshMemberships: fetchMemberships,
       }}>
       {children}
     </TeamContext.Provider>

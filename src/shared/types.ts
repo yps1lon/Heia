@@ -141,9 +141,9 @@ export type HomeStackParamList = {
 
 export type OnboardingStackParamList = {
   Welcome: undefined;
-  UserPicker: undefined;
-  FindTeam: {userId: string};
-  TeamJoin: {userId: string; teamId: string};
+  Auth: undefined;
+  FindTeam: undefined;
+  TeamJoin: {teamId: string; clubName: string; teamName: string; ageGroup: string; sportDisplayName: string};
 };
 
 export type KalenderStackParamList = {

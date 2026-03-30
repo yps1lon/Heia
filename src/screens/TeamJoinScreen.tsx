@@ -1,19 +1,14 @@
 import React, {useState} from 'react';
-import {View, Text, Pressable, StyleSheet} from 'react-native';
+import {View, Text, Pressable, StyleSheet, Alert} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Button} from '../components';
-import {useUser} from '../context';
 import {useActiveTeam} from '../context';
-import {
-  getTeamSpaceForTeam,
-  getMemberCount,
-  activateTeam,
-  joinTeamSpace,
-} from '../data/teamData';
-import {teams, users} from '../shared/mockData';
-import type {UserRole, OnboardingStackParamList} from '../shared/types';
+import {activateTeamSpace} from '../lib/api/teams';
+import type {OnboardingStackParamList} from '../shared/types';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+
+type UserRole = 'trener' | 'forelder';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'TeamJoin'>;
 
@@ -24,33 +19,26 @@ const ROLES: {key: UserRole; label: string; description: string}[] = [
 
 export function TeamJoinScreen({route}: Props) {
   const insets = useSafeAreaInsets();
-  const {userId, teamId} = route.params;
-  const {setUser} = useUser();
-  const {setActiveTeamSpace} = useActiveTeam();
+  const {teamId, clubName, teamName, ageGroup, sportDisplayName} = route.params;
+  const {setActiveTeamSpace, refreshMemberships} = useActiveTeam();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const team = teams.find(t => t.id === teamId)!;
-  const existingTeamSpace = getTeamSpaceForTeam(teamId);
-  const memberCount = existingTeamSpace
-    ? getMemberCount(existingTeamSpace.id)
-    : 0;
-
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!selectedRole) return;
-
-    let teamSpaceId: string;
-
-    if (existingTeamSpace) {
-      const membership = joinTeamSpace(existingTeamSpace.id, userId, selectedRole);
-      teamSpaceId = membership.teamSpaceId;
-    } else {
-      const {teamSpace} = activateTeam(teamId, userId, selectedRole);
-      teamSpaceId = teamSpace.id;
+    setSubmitting(true);
+    try {
+      const result = await activateTeamSpace(
+        teamId,
+        `${clubName} ${teamName}`,
+      );
+      await refreshMemberships();
+      setActiveTeamSpace(result.teamSpaceId);
+    } catch (e: any) {
+      Alert.alert('Feil', e.message || 'Kunne ikke aktivere laget');
+    } finally {
+      setSubmitting(false);
     }
-
-    const user = users.find(u => u.id === userId)!;
-    setUser(user);
-    setActiveTeamSpace(teamSpaceId);
   };
 
   return (
@@ -58,30 +46,19 @@ export function TeamJoinScreen({route}: Props) {
       <View style={styles.content}>
         {/* Lag-info */}
         <View style={styles.teamCard}>
-          <Text style={styles.club}>{team.club}</Text>
-          <Text style={styles.teamName}>{team.teamName}</Text>
+          <Text style={styles.club}>{clubName}</Text>
+          <Text style={styles.teamName}>{teamName}</Text>
           <Text style={styles.meta}>
-            {team.ageGroup} · {formatSport(team.sport)}
+            {ageGroup} · {sportDisplayName}
           </Text>
 
-          {existingTeamSpace ? (
-            <View style={styles.statusRow}>
-              <View style={styles.badgeActive}>
-                <Text style={styles.badgeActiveText}>Aktivt i Heia</Text>
-              </View>
-              <Text style={styles.memberCount}>
-                {memberCount} {memberCount === 1 ? 'medlem' : 'medlemmer'}
+          <View style={styles.statusRow}>
+            <View style={styles.badgeInactive}>
+              <Text style={styles.badgeInactiveText}>
+                Aktiver laget i Heia
               </Text>
             </View>
-          ) : (
-            <View style={styles.statusRow}>
-              <View style={styles.badgeInactive}>
-                <Text style={styles.badgeInactiveText}>
-                  Ikke aktivert ennå
-                </Text>
-              </View>
-            </View>
-          )}
+          </View>
         </View>
 
         {/* Rollevalg */}
@@ -109,29 +86,14 @@ export function TeamJoinScreen({route}: Props) {
       {/* Handlingsknapp */}
       <View style={[styles.footer, {paddingBottom: insets.bottom + spacing.lg}]}>
         <Button
-          title={existingTeamSpace ? 'Bli med i laget' : 'Aktiver laget'}
+          title="Aktiver laget"
           onPress={handleConfirm}
-          disabled={!selectedRole}
+          disabled={!selectedRole || submitting}
           size="lg"
         />
       </View>
     </View>
   );
-}
-
-function formatSport(sport: string): string {
-  switch (sport) {
-    case 'fotball':
-      return 'Fotball';
-    case 'handball':
-      return 'Håndball';
-    case 'basket':
-      return 'Basket';
-    case 'ishockey':
-      return 'Ishockey';
-    default:
-      return 'Annet';
-  }
 }
 
 const styles = StyleSheet.create({
@@ -168,21 +130,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  badgeActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  badgeActiveText: {
-    ...typography.caption,
-    color: colors.success,
-    fontWeight: '600',
-  },
-  memberCount: {
-    ...typography.caption,
-    color: colors.textTertiary,
   },
   badgeInactive: {
     backgroundColor: colors.background,

@@ -1,37 +1,56 @@
-import React, {useState} from 'react';
-import {View, Text, TextInput, FlatList, Pressable, StyleSheet} from 'react-native';
+import React, {useCallback, useEffect, useState} from 'react';
+import {View, Text, TextInput, FlatList, Pressable, TouchableOpacity, StyleSheet, ActivityIndicator} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, typography, spacing, radius, shadows} from '../theme';
-import {getAllTeams} from '../data/teamData';
-import type {Team, OnboardingStackParamList} from '../shared/types';
+import {searchTeams, type TeamSearchResult} from '../lib/api/teams';
+import {useAuth} from '../context';
+import type {OnboardingStackParamList} from '../shared/types';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'FindTeam'>;
 
-export function FindTeamScreen({navigation, route}: Props) {
+export function FindTeamScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {userId} = route.params;
+  const {signOut} = useAuth();
   const [search, setSearch] = useState('');
+  const [teams, setTeams] = useState<TeamSearchResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const teams = getAllTeams();
-  const filtered = search
-    ? teams.filter(t => {
-        const q = search.toLowerCase();
-        return (
-          t.club.toLowerCase().includes(q) ||
-          t.teamName.toLowerCase().includes(q) ||
-          t.ageGroup.toLowerCase().includes(q)
-        );
-      })
-    : teams;
+  const doSearch = useCallback(async (query: string) => {
+    setLoading(true);
+    try {
+      const results = await searchTeams(query);
+      setTeams(results);
+    } catch {
+      setTeams([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleSelect = (team: Team) => {
-    navigation.navigate('TeamJoin', {userId, teamId: team.id});
+  useEffect(() => {
+    doSearch(search);
+  }, [search, doSearch]);
+
+  const handleSelect = (team: TeamSearchResult) => {
+    navigation.navigate('TeamJoin', {
+      teamId: team.id,
+      clubName: team.clubName,
+      teamName: team.name,
+      ageGroup: team.ageGroup,
+      sportDisplayName: team.sportDisplayName,
+    });
   };
 
   return (
     <View style={[styles.screen, {paddingTop: insets.top + spacing['2xl']}]}>
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={signOut}
+          activeOpacity={0.5}
+          style={styles.logoutButton}>
+          <Text style={styles.backText}>Logg ut</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Finn laget ditt</Text>
         <Text style={styles.subtitle}>Søk etter klubb eller lagsnavn</Text>
       </View>
@@ -49,7 +68,7 @@ export function FindTeamScreen({navigation, route}: Props) {
       </View>
 
       <FlatList
-        data={filtered}
+        data={teams}
         keyExtractor={item => item.id}
         contentContainerStyle={[
           styles.list,
@@ -67,23 +86,27 @@ export function FindTeamScreen({navigation, route}: Props) {
             <View
               style={[
                 styles.sportBadge,
-                {backgroundColor: sportColor(item.sport)},
+                {backgroundColor: sportColor(item.sportSlug)},
               ]}>
-              <Text style={styles.sportEmoji}>{sportIcon(item.sport)}</Text>
+              <Text style={styles.sportEmoji}>{sportIcon(item.sportSlug)}</Text>
             </View>
             <View style={styles.teamInfo}>
               <Text style={styles.teamName}>
-                {item.club} {item.teamName}
+                {item.clubName} {item.name}
               </Text>
               <Text style={styles.teamMeta}>
-                {item.ageGroup} · {formatSport(item.sport)}
+                {item.ageGroup} · {item.sportDisplayName}
               </Text>
             </View>
             <Text style={styles.arrow}>›</Text>
           </Pressable>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>Ingen lag funnet</Text>
+          loading ? (
+            <ActivityIndicator size="large" color={colors.heia} style={{marginTop: spacing['4xl']}} />
+          ) : (
+            <Text style={styles.empty}>Ingen lag funnet</Text>
+          )
         }
       />
     </View>
@@ -118,21 +141,6 @@ function sportColor(sport: string): string {
   }
 }
 
-function formatSport(sport: string): string {
-  switch (sport) {
-    case 'fotball':
-      return 'Fotball';
-    case 'handball':
-      return 'Håndball';
-    case 'basket':
-      return 'Basket';
-    case 'ishockey':
-      return 'Ishockey';
-    default:
-      return 'Annet';
-  }
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -142,9 +150,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['2xl'],
     marginBottom: spacing.xl,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoutButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
+  },
   title: {
     ...typography.heading1,
     marginBottom: spacing.xs,
+  },
+  backText: {
+    ...typography.body,
+    color: colors.textTertiary,
   },
   subtitle: {
     ...typography.body,

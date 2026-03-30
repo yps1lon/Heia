@@ -30,5 +30,16 @@ target 'Heia2' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Patch fmt consteval for Xcode 26+ (Apple clang reports consteval support but it's broken)
+    fmt_base = File.join(installer.sandbox.root, 'fmt/include/fmt/base.h')
+    if File.exist?(fmt_base)
+      content = File.read(fmt_base)
+      patched = content.gsub(
+        '#if FMT_USE_CONSTEVAL',
+        '#if FMT_USE_CONSTEVAL && !defined(__apple_build_version__)'
+      )
+      File.write(fmt_base, patched) if patched != content
+    end
   end
 end

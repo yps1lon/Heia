@@ -4,17 +4,16 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import {colors, typography, spacing, radius, shadows} from '../theme';
 import {Avatar, ListRow} from '../components';
-import {useUser, useActiveTeam} from '../context';
-import {getMemberCount} from '../data/teamData';
+import {useAuth, useActiveTeam} from '../context';
 
 export function ProfilScreen() {
   const insets = useSafeAreaInsets();
-  const {user, clearUser} = useUser();
+  const {profile, signOut} = useAuth();
   const {activeTeamSpaceId, userMemberships, setActiveTeamSpace} =
     useActiveTeam();
   const navigation = useNavigation();
 
-  if (!user) return null;
+  if (!profile) return null;
 
   const activeMembership = userMemberships.find(
     m => m.teamSpaceId === activeTeamSpaceId,
@@ -26,7 +25,6 @@ export function ProfilScreen() {
   function handleTeamSwitch(teamSpaceId: string) {
     if (teamSpaceId === activeTeamSpaceId) return;
     setActiveTeamSpace(teamSpaceId);
-    // Reset navigasjon og send bruker til Hjem
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
@@ -45,8 +43,8 @@ export function ProfilScreen() {
           styles.profileSection,
           {paddingTop: insets.top + spacing['2xl']},
         ]}>
-        <Avatar name={user.name} size="lg" />
-        <Text style={styles.userName}>{user.name}</Text>
+        <Avatar name={profile.displayName} size="lg" />
+        <Text style={styles.userName}>{profile.displayName}</Text>
         <View style={styles.roleRow}>
           <View
             style={[
@@ -67,45 +65,49 @@ export function ProfilScreen() {
       </View>
 
       {/* Dine lag */}
-      <View style={styles.teamsSection}>
-        <Text style={styles.sectionTitle}>Dine lag</Text>
-        {userMemberships.map(m => {
-          const isActive = m.teamSpaceId === activeTeamSpaceId;
-          const memberCount = getMemberCount(m.teamSpaceId);
-          return (
-            <Pressable
-              key={m.id}
-              onPress={() => handleTeamSwitch(m.teamSpaceId)}
-              style={({pressed}) => [
-                styles.teamCard,
-                isActive && styles.teamCardActive,
-                pressed && styles.teamCardPressed,
-              ]}>
-              <View
-                style={[styles.teamDot, {backgroundColor: m.teamSpace.color}]}
-              />
-              <View style={styles.teamInfo}>
-                <Text style={styles.teamName}>
-                  {m.teamSpace.displayName}
-                </Text>
-                <Text style={styles.teamMeta}>
-                  {m.team.ageGroup} · {memberCount} medlemmer ·{' '}
-                  {m.role === 'trener' ? 'Trener' : 'Forelder'}
-                </Text>
-              </View>
-              {isActive && <Text style={styles.activeCheck}>✓</Text>}
-            </Pressable>
-          );
-        })}
-      </View>
+      {userMemberships.length > 0 && (
+        <View style={styles.teamsSection}>
+          <Text style={styles.sectionTitle}>Dine lag</Text>
+          {userMemberships.map(m => {
+            const isActive = m.teamSpaceId === activeTeamSpaceId;
+            return (
+              <Pressable
+                key={m.id}
+                onPress={() => handleTeamSwitch(m.teamSpaceId)}
+                style={({pressed}) => [
+                  styles.teamCard,
+                  isActive && styles.teamCardActive,
+                  pressed && styles.teamCardPressed,
+                ]}>
+                <View
+                  style={[
+                    styles.teamDot,
+                    {backgroundColor: m.teamSpace.color},
+                  ]}
+                />
+                <View style={styles.teamInfo}>
+                  <Text style={styles.teamName}>
+                    {m.teamSpace.displayName}
+                  </Text>
+                  <Text style={styles.teamMeta}>
+                    {m.team.ageGroup} ·{' '}
+                    {m.role === 'trener' ? 'Trener' : 'Forelder'}
+                  </Text>
+                </View>
+                {isActive && <Text style={styles.activeCheck}>✓</Text>}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {/* Meny */}
       <View style={styles.menuSection}>
         <ListRow
           icon={<Text style={styles.menuIcon}>{'  '}</Text>}
-          title="Bytt bruker"
-          subtitle="Logg inn som en annen"
-          onPress={clearUser}
+          title="Logg ut"
+          subtitle="Logg ut av Heia"
+          onPress={signOut}
         />
         <ListRow
           icon={<Text style={styles.menuIcon}>{'  '}</Text>}
